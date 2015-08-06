@@ -19,13 +19,15 @@ from io import BytesIO as StringIO
 
 
 
-def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=None):
+def _callProtocolWithDeferred(protocol, executable, args, env, path, uid,
+        gid, usePTY, childFDs, reactor=None):
     if reactor is None:
         from twisted.internet import reactor
 
     d = defer.Deferred()
     p = protocol(d)
-    reactor.spawnProcess(p, executable, (executable,)+tuple(args), env, path)
+    reactor.spawnProcess(p, executable, (executable,)+tuple(args), env,
+                            path, uid, gid, usePTY, childFDs)
     return d
 
 
@@ -96,7 +98,8 @@ class _BackRelay(protocol.ProcessProtocol):
 
 
 
-def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
+def getProcessOutput(executable, args=(), env={}, path=None, uid=None,
+        gid=None, usePTY=0, childFDs=None, reactor=None,
                      errortoo=0):
     """
     Spawn a process and return its output as a deferred returning a string.
@@ -125,6 +128,7 @@ def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
     return _callProtocolWithDeferred(lambda d:
                                         _BackRelay(d, errortoo=errortoo),
                                      executable, args, env, path,
+                                    uid, gid, usePTY, childFDs,
                                      reactor)
 
 
@@ -137,9 +141,11 @@ class _ValueGetter(protocol.ProcessProtocol):
         self.deferred.callback(reason.value.exitCode)
 
 
-def getProcessValue(executable, args=(), env={}, path=None, reactor=None):
+def getProcessValue(executable, args=(), env={}, path=None, uid=None,
+        gid=None, usePTY=0, childFDs=None, reactor=None):
     """Spawn a process and return its exit code as a Deferred."""
     return _callProtocolWithDeferred(_ValueGetter, executable, args, env, path,
+                                    uid, gid, usePTY, childFDs,
                                     reactor)
 
 
